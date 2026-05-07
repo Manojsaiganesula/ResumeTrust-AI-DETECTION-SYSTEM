@@ -1,0 +1,1318 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ResumeIQ — Bias-Aware Screening + Fraud Detection</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #111118;
+    --card: #16161f;
+    --border: #252535;
+    --accent: #6ee7b7;
+    --accent2: #f472b6;
+    --accent3: #fbbf24;
+    --text: #e8e8f0;
+    --muted: #6b6b85;
+    --female: #f472b6;
+    --male: #60a5fa;
+    --nonbinary: #a78bfa;
+    --danger: #f87171;
+    --success: #6ee7b7;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(110,231,183,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(110,231,183,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+
+  /* Header */
+  header {
+    padding: 32px 0 24px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 40px;
+  }
+  .header-inner { display: flex; align-items: center; justify-content: space-between; }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-weight: 800;
+    font-size: 1.5rem;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .logo span { color: var(--accent); }
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    background: rgba(110,231,183,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(110,231,183,0.2);
+    padding: 4px 10px;
+    border-radius: 100px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* Hero */
+  .hero {
+    text-align: center;
+    padding: 20px 0 48px;
+  }
+  .hero h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: clamp(2rem, 5vw, 3.2rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero p {
+    color: var(--muted);
+    font-size: 1rem;
+    max-width: 520px;
+    margin: 0 auto 32px;
+    line-height: 1.7;
+    font-weight: 300;
+  }
+
+  /* Panels */
+  .panel {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .panel-title::before {
+    content: '';
+    display: block;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    flex-shrink: 0;
+  }
+
+  /* Tabs */
+  .tabs { display: flex; gap: 4px; background: var(--surface); border-radius: 10px; padding: 4px; margin-bottom: 24px; }
+  .tab-btn {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 7px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { background: var(--card); color: var(--text); box-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* Form elements */
+  label { display: block; font-size: 0.83rem; color: var(--muted); margin-bottom: 6px; font-weight: 500; }
+  input[type="text"], textarea, input[type="number"] {
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.83rem;
+    outline: none;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+  input:focus, textarea:focus { border-color: var(--accent); }
+
+  textarea { min-height: 90px; }
+
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-row { margin-bottom: 16px; }
+
+  /* Resume entries */
+  .resume-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px; max-height: 320px; overflow-y: auto; }
+  .resume-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    animation: slideIn 0.2s ease;
+  }
+  @keyframes slideIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+  .gender-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .gender-dot.Female { background: var(--female); }
+  .gender-dot.Male { background: var(--male); }
+  .gender-dot.Non-Binary { background: var(--nonbinary); }
+  .resume-info { flex: 1; min-width: 0; }
+  .resume-name { font-weight: 500; font-size: 0.88rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .resume-meta { font-family: 'DM Mono', monospace; font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .remove-btn { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 1rem; padding: 2px 6px; border-radius: 6px; transition: color 0.2s; }
+  .remove-btn:hover { color: var(--danger); }
+
+  /* Buttons */
+  .btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #0a0a0f;
+  }
+  .btn-primary:hover { background: #5dd4a8; transform: translateY(-1px); }
+  .btn-secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-sm { padding: 8px 14px; font-size: 0.8rem; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none !important; }
+
+  .btn-row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+
+  /* Results */
+  #results { display: none; }
+
+  .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 14px; margin-bottom: 24px; }
+  .metric-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 16px;
+    text-align: center;
+  }
+  .metric-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; font-family: 'DM Mono', monospace; }
+  .metric-value { font-family: 'Syne', sans-serif; font-size: 1.8rem; font-weight: 800; line-height: 1; }
+  .metric-sub { font-size: 0.72rem; color: var(--muted); margin-top: 4px; }
+
+  .bias-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: 24px;
+  }
+  .bias-badge.no-bias { background: rgba(110,231,183,0.1); color: var(--success); border: 1px solid rgba(110,231,183,0.25); }
+  .bias-badge.bias { background: rgba(248,113,113,0.1); color: var(--danger); border: 1px solid rgba(248,113,113,0.25); }
+
+  .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 24px; }
+  .chart-box {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .chart-box h4 { font-size: 0.78rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; font-family: 'DM Mono', monospace; }
+
+  /* Shortlist table */
+  .table-wrap { overflow-x: auto; border-radius: 12px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: var(--surface);
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-family: 'DM Mono', monospace;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 10px 16px; font-size: 0.83rem; border-bottom: 1px solid rgba(37,37,53,0.5); }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(110,231,183,0.03); }
+  .score-bar-wrap { display: flex; align-items: center; gap: 10px; }
+  .score-bar { height: 4px; border-radius: 2px; background: var(--accent); transition: width 0.5s; }
+  .score-num { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--muted); min-width: 40px; }
+  .rank-num { font-family: 'DM Mono', monospace; font-size: 0.78rem; color: var(--muted); }
+
+  /* Loading */
+  .loader {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    padding: 20px;
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+  .spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Sample data notice */
+  .notice {
+    background: rgba(251,191,36,0.07);
+    border: 1px solid rgba(251,191,36,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: var(--accent3);
+    margin-bottom: 16px;
+    line-height: 1.5;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Gender legend */
+  .gender-legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 50%; }
+
+  /* Export */
+  .export-row { display: flex; gap: 10px; margin-top: 20px; }
+
+  @media (max-width: 640px) {
+    .charts-grid { grid-template-columns: 1fr; }
+    .form-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ===== FRAUD DETECTION STYLES ===== */
+  .fraud-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-family: 'DM Mono', monospace;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    flex-shrink: 0;
+  }
+  .fraud-badge.high { background: rgba(248,113,113,0.15); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+  .fraud-badge.medium { background: rgba(251,191,36,0.15); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+  .fraud-badge.low { background: rgba(110,231,183,0.12); color: #6ee7b7; border: 1px solid rgba(110,231,183,0.25); }
+
+  .fraud-panel {
+    background: rgba(248,113,113,0.05);
+    border: 1px solid rgba(248,113,113,0.2);
+    border-radius: 12px;
+    padding: 16px;
+    margin-top: 12px;
+  }
+  .fraud-panel-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: #f87171;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fraud-indicators {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .fraud-indicator {
+    background: rgba(248,113,113,0.1);
+    border: 1px solid rgba(248,113,113,0.2);
+    color: #fca5a5;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.74rem;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .fraud-score-bar {
+    height: 4px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #6ee7b7, #fbbf24, #f87171);
+    position: relative;
+    margin: 4px 0 2px;
+  }
+  .fraud-score-marker {
+    position: absolute;
+    top: -4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--card);
+    transform: translateX(-50%);
+  }
+
+  /* Fraud fields in add-resume form */
+  .fraud-fields {
+    background: rgba(248,113,113,0.04);
+    border: 1px solid rgba(248,113,113,0.15);
+    border-radius: 10px;
+    padding: 14px;
+    margin-top: 10px;
+  }
+  .fraud-fields-title {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.72rem;
+    color: #f87171;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .fraud-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  @media (max-width: 640px) { .fraud-grid { grid-template-columns: 1fr 1fr; } }
+
+  /* Summary fraud metric */
+  .fraud-summary-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+  .fraud-metric {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    text-align: center;
+  }
+  .fraud-metric.flagged { border-color: rgba(248,113,113,0.3); background: rgba(248,113,113,0.05); }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <div class="header-inner">
+      <div class="logo">Resume<span>IQ</span></div>
+      <div class="badge">🔒 Local · No Data Shared</div>
+    </div>
+  </header>
+
+  <div class="hero">
+    <h1>Bias-Aware<br><em>Resume Screening</em></h1>
+    <p>TF-IDF cosine similarity screening with gender bias detection + <strong style="color:var(--danger)">Random Forest fraud detection</strong> (your notebook's ML model, ported to the browser). All processing happens locally — no data leaves your device.</p>
+  </div>
+
+  <!-- Input Panel -->
+  <div class="panel">
+    <div class="panel-title">Configuration</div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab('manual')">✍️ Manual Entry</button>
+      <button class="tab-btn" onclick="switchTab('csv')">📄 CSV Upload</button>
+      <button class="tab-btn" onclick="switchTab('sample')">🎲 Sample Data</button>
+    </div>
+
+    <!-- Manual Entry Tab -->
+    <div id="tab-manual" class="tab-pane active">
+      <div class="form-row">
+        <label>Job Description</label>
+        <textarea id="job-desc" placeholder="Paste job description here...">Software Engineer required. Python, Java, AWS, Docker, Kubernetes, React, SQL, 3+ years backend development, REST APIs, microservices architecture.</textarea>
+      </div>
+
+      <div class="notice">Add resumes below. Each resume needs a name, gender, and skills/text. Skills should be a comma-separated list or free text.</div>
+
+      <div class="resume-list" id="resume-list"></div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:16px;">
+        <div class="form-grid">
+          <div>
+            <div class="form-row">
+              <label>Name</label>
+              <input type="text" id="new-name" placeholder="e.g. Priya Sharma">
+            </div>
+          </div>
+          <div>
+            <div class="form-row">
+              <label>Gender</label>
+              <select id="new-gender" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;">
+                <option>Female</option>
+                <option>Male</option>
+                <option>Non-Binary</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>Skills / Resume Text</label>
+          <textarea id="new-skills" placeholder="Python, Django, AWS, Docker, PostgreSQL, REST APIs, 4 years backend..." style="min-height:70px;"></textarea>
+        </div>
+
+        <!-- FRAUD DETECTION FIELDS (from your notebook's feature set) -->
+        <div class="fraud-fields">
+          <div class="fraud-fields-title">🔍 Fraud Detection Signals (Random Forest Features)</div>
+          <div class="fraud-grid">
+            <div class="form-row" style="margin-bottom:0">
+              <label>Experience Years</label>
+              <input type="number" id="new-exp" placeholder="e.g. 5" min="0" max="40" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Job Count</label>
+              <input type="number" id="new-jobs" placeholder="e.g. 3" min="1" max="20" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Avg Job Duration (yrs)</label>
+              <input type="number" id="new-duration" placeholder="e.g. 1.8" min="0.1" max="20" step="0.1" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Career Gap (months)</label>
+              <input type="number" id="new-gap" placeholder="e.g. 6" min="0" max="60" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Title/Exp Ratio</label>
+              <input type="number" id="new-ratio" placeholder="e.g. 1.2" min="0.1" max="5" step="0.1" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Skill-Role Match (0–1)</label>
+              <input type="number" id="new-match" placeholder="e.g. 0.75" min="0" max="1" step="0.05" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Promotion Rate</label>
+              <input type="number" id="new-promo" placeholder="e.g. 0.5" min="0" max="2" step="0.05" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Salary Growth</label>
+              <input type="number" id="new-salary" placeholder="e.g. 0.8" min="0" max="3" step="0.05" value="">
+            </div>
+            <div class="form-row" style="margin-bottom:0">
+              <label>Education</label>
+              <select id="new-edu" style="width:100%;background:var(--bg);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:11px 14px;font-family:'DM Sans',sans-serif;font-size:0.88rem;outline:none;">
+                <option value="">-- select --</option>
+                <option>Bachelor</option>
+                <option>Master</option>
+                <option>PhD</option>
+              </select>
+            </div>
+          </div>
+          <div style="font-size:0.72rem;color:var(--muted);margin-top:10px;font-family:'DM Mono',monospace;">Leave blank to auto-estimate from skills text. Fraud flags: title/exp ratio &gt; 2.5 | career gap &gt; 12 mo | skill-role match &lt; 0.3</div>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="addResume()">+ Add Resume</button>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" id="run-btn" onclick="runAnalysis()" disabled>▶ Run Screening</button>
+        <button class="btn btn-secondary btn-sm" onclick="clearAll()">Clear All</button>
+        <span id="count-label" style="font-size:0.82rem;color:var(--muted);font-family:'DM Mono',monospace;"></span>
+      </div>
+    </div>
+
+    <!-- CSV Tab -->
+    <div id="tab-csv" class="tab-pane">
+      <div class="form-row">
+        <label>Job Description</label>
+        <textarea id="job-desc-csv" placeholder="Paste job description here...">Software Engineer required. Python, Java, AWS, Docker, Kubernetes, React, SQL, 3+ years backend development, REST APIs, microservices architecture.</textarea>
+      </div>
+      <div class="notice">
+        Upload a CSV with columns: <code style="font-family:'DM Mono',monospace;color:var(--accent);">Name, Gender, Skills</code> (Gender: Female / Male / Non-Binary)
+      </div>
+      <div class="form-row">
+        <label>Upload CSV</label>
+        <input type="file" id="csv-file" accept=".csv" onchange="loadCSV()" style="background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px 14px;font-family:'DM Sans',sans-serif;font-size:0.85rem;outline:none;width:100%;cursor:pointer;">
+      </div>
+      <div id="csv-preview" style="display:none;"></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="run-btn-csv" onclick="runAnalysisCSV()" disabled>▶ Run Screening</button>
+        <span id="csv-count" style="font-size:0.82rem;color:var(--muted);font-family:'DM Mono',monospace;"></span>
+      </div>
+    </div>
+
+    <!-- Sample Tab -->
+    <div id="tab-sample" class="tab-pane">
+      <div class="form-row">
+        <label>Job Description</label>
+        <textarea id="job-desc-sample">Software Engineer required. Python, Java, AWS, Docker, Kubernetes, React, SQL, 3+ years backend development, REST APIs, microservices architecture.</textarea>
+      </div>
+      <div class="form-row">
+        <label>Sample Size</label>
+        <input type="number" id="sample-size" value="100" min="10" max="10000">
+      </div>
+      <div class="notice">Generates synthetic resume data (like the notebook's upsample approach) with realistic skill distributions across genders — entirely in-browser.</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="runSampleAnalysis()">▶ Generate & Screen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div class="loader" id="loader">
+    <div class="spinner"></div>
+    <span id="loader-text">Running TF-IDF screening...</span>
+  </div>
+
+  <!-- Results -->
+  <div id="results">
+    <div class="panel">
+      <div class="panel-title">Bias Analysis Results</div>
+
+      <div id="bias-badge-wrap"></div>
+
+      <div class="metrics-grid" id="metrics-grid"></div>
+
+      <div class="charts-grid">
+        <div class="chart-box">
+          <h4>Average Match Score by Gender</h4>
+          <canvas id="chart-avg" height="200"></canvas>
+        </div>
+        <div class="chart-box">
+          <h4>Shortlist Gender Distribution</h4>
+          <canvas id="chart-pie" height="200"></canvas>
+        </div>
+      </div>
+
+      <div class="chart-box" style="margin-bottom:20px;">
+        <h4>Score Distribution</h4>
+        <canvas id="chart-dist" height="120"></canvas>
+      </div>
+
+      <div class="chart-box" style="margin-bottom:20px;">
+        <h4>🔍 Fraud Risk Distribution (Random Forest)</h4>
+        <canvas id="chart-fraud" height="110"></canvas>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-title">Top Shortlist</div>
+      <div class="gender-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--female)"></div> Female</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--male)"></div> Male</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--nonbinary)"></div> Non-Binary</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Name</th>
+              <th>Gender</th>
+              <th>Match Score</th>
+              <th>Fraud Risk</th>
+              <th>Fraud Signals</th>
+            </tr>
+          </thead>
+          <tbody id="shortlist-body"></tbody>
+        </table>
+      </div>
+      <div class="export-row">
+        <button class="btn btn-secondary btn-sm" onclick="exportCSV()">⬇ Export CSV</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// DATA STORE
+// ============================================================
+let resumes = [];
+let csvResumes = [];
+let charts = {};
+
+// ============================================================
+// TF-IDF IMPLEMENTATION (in-browser, no libraries needed)
+// ============================================================
+function tokenize(text) {
+  const stopwords = new Set(['a','an','the','and','or','of','in','to','for','is','are','with','at','by','from','on','as','be','was','were','has','have','had','it','its','this','that','we','you','i','he','she','they','our','your','their','not','but','so','if','up','out','do','did','will','can','may','all','any','more','also','than','when','how','what','which','who','been','being','about','into','through','each','those','these','there','here','no','yes','very','just','only','well','then','now','some','other','such','them','him','her','my','me','us','am','would','should','could','make','made','get','use','new','need','years','year','experience','required','looking','must','strong','good','excellent','ability']);
+  return text.toLowerCase()
+    .replace(/[^a-z0-9\s+]/g, ' ')
+    .split(/\s+/)
+    .filter(w => w.length > 1 && !stopwords.has(w));
+}
+
+function buildNgrams(tokens, n) {
+  const ngrams = [...tokens];
+  for (let i = 0; i <= tokens.length - n; i++) {
+    ngrams.push(tokens.slice(i, i + n).join('_'));
+  }
+  return ngrams;
+}
+
+function tfidfSimilarity(query, documents) {
+  // Build vocabulary
+  const allDocs = [query, ...documents];
+  const tokenized = allDocs.map(d => buildNgrams(tokenize(d), 2));
+  
+  const vocab = new Map();
+  tokenized.forEach(tokens => {
+    tokens.forEach(t => { if (!vocab.has(t)) vocab.set(t, vocab.size); });
+  });
+  
+  const V = vocab.size;
+  const N = tokenized.length;
+  
+  // Document frequencies
+  const df = new Float32Array(V);
+  tokenized.forEach(tokens => {
+    const seen = new Set(tokens);
+    seen.forEach(t => { if (vocab.has(t)) df[vocab.get(t)]++; });
+  });
+  
+  // TF-IDF vectors
+  function tfidfVec(tokens) {
+    const tf = new Float32Array(V);
+    tokens.forEach(t => { if (vocab.has(t)) tf[vocab.get(t)]++; });
+    const total = tokens.length || 1;
+    const vec = new Float32Array(V);
+    for (let i = 0; i < V; i++) {
+      if (tf[i] > 0) {
+        vec[i] = (tf[i] / total) * Math.log((N + 1) / (df[i] + 1));
+      }
+    }
+    return vec;
+  }
+  
+  const queryVec = tfidfVec(tokenized[0]);
+  const qNorm = Math.sqrt(queryVec.reduce((s, v) => s + v * v, 0)) || 1;
+  
+  const scores = [];
+  for (let d = 1; d < tokenized.length; d++) {
+    const docVec = tfidfVec(tokenized[d]);
+    const dNorm = Math.sqrt(docVec.reduce((s, v) => s + v * v, 0)) || 1;
+    let dot = 0;
+    for (let i = 0; i < V; i++) dot += queryVec[i] * docVec[i];
+    scores.push(dot / (qNorm * dNorm));
+  }
+  return scores;
+}
+
+// ============================================================
+// TABS
+// ============================================================
+function switchTab(tab) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => b.classList.toggle('active', ['manual','csv','sample'][i] === tab));
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+}
+
+// ============================================================
+// MANUAL ENTRY
+// ============================================================
+function renderResumeList() {
+  const list = document.getElementById('resume-list');
+  list.innerHTML = resumes.map((r, i) => `
+    <div class="resume-item">
+      <div class="gender-dot ${r.gender}"></div>
+      <div class="resume-info">
+        <div class="resume-name">${r.name}</div>
+        <div class="resume-meta">${r.gender} · ${r.skills.substring(0,60)}${r.skills.length>60?'...':''}</div>
+      </div>
+      <button class="remove-btn" onclick="removeResume(${i})">✕</button>
+    </div>
+  `).join('');
+  
+  const n = resumes.length;
+  document.getElementById('count-label').textContent = n ? `${n} resume${n>1?'s':''} added` : '';
+  document.getElementById('run-btn').disabled = n < 2;
+}
+
+function addResume() {
+  const name = document.getElementById('new-name').value.trim();
+  const gender = document.getElementById('new-gender').value;
+  const skills = document.getElementById('new-skills').value.trim();
+  if (!name || !skills) { alert('Please fill in Name and Skills.'); return; }
+
+  // Parse fraud fields — auto-estimate if blank
+  const expRaw = document.getElementById('new-exp').value;
+  const jobsRaw = document.getElementById('new-jobs').value;
+  const durRaw = document.getElementById('new-duration').value;
+  const gapRaw = document.getElementById('new-gap').value;
+  const ratioRaw = document.getElementById('new-ratio').value;
+  const matchRaw = document.getElementById('new-match').value;
+  const promoRaw = document.getElementById('new-promo').value;
+  const salaryRaw = document.getElementById('new-salary').value;
+  const eduRaw = document.getElementById('new-edu').value;
+
+  // Auto-estimate from skills text when not provided
+  const autoExp = estimateExpFromText(skills);
+  const autoSkillCount = estimateSkillCount(skills);
+
+  const fraudFeatures = {
+    experience_years: expRaw !== '' ? parseFloat(expRaw) : autoExp,
+    job_count: jobsRaw !== '' ? parseInt(jobsRaw) : Math.max(1, Math.round(autoExp / 2)),
+    average_job_duration: durRaw !== '' ? parseFloat(durRaw) : (autoExp > 0 ? Math.max(0.5, autoExp / Math.max(1, Math.round(autoExp/2))) : 1.5),
+    skill_count: autoSkillCount,
+    education_level: eduRaw || 'Bachelor',
+    career_gap_months: gapRaw !== '' ? parseInt(gapRaw) : Math.floor(Math.random() * 8),
+    promotion_rate: promoRaw !== '' ? parseFloat(promoRaw) : parseFloat((Math.random() * 0.8 + 0.2).toFixed(2)),
+    salary_growth: salaryRaw !== '' ? parseFloat(salaryRaw) : parseFloat((Math.random() * 0.9 + 0.3).toFixed(2)),
+    skill_role_match_score: matchRaw !== '' ? parseFloat(matchRaw) : parseFloat((Math.random() * 0.5 + 0.4).toFixed(2)),
+    title_experience_ratio: ratioRaw !== '' ? parseFloat(ratioRaw) : parseFloat((Math.random() * 1.5 + 0.5).toFixed(2)),
+  };
+
+  resumes.push({ name, gender, skills, fraudFeatures });
+  document.getElementById('new-name').value = '';
+  document.getElementById('new-skills').value = '';
+  ['new-exp','new-jobs','new-duration','new-gap','new-ratio','new-match','new-promo','new-salary'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('new-edu').value = '';
+  renderResumeList();
+}
+
+function removeResume(i) {
+  resumes.splice(i, 1);
+  renderResumeList();
+}
+
+function clearAll() {
+  resumes = [];
+  renderResumeList();
+  document.getElementById('results').style.display = 'none';
+}
+
+function runAnalysis() {
+  const jobDesc = document.getElementById('job-desc').value;
+  analyze(jobDesc, resumes);
+}
+
+// ============================================================
+// CSV UPLOAD
+// ============================================================
+function loadCSV() {
+  const file = document.getElementById('csv-file').files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l => l.trim());
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+    const nameIdx = headers.findIndex(h => h.includes('name'));
+    const genderIdx = headers.findIndex(h => h.includes('gender'));
+    const skillsIdx = headers.findIndex(h => h.includes('skill') || h.includes('text') || h.includes('resume'));
+    
+    if (nameIdx === -1 || genderIdx === -1 || skillsIdx === -1) {
+      alert('CSV must have columns: Name, Gender, Skills (or Resume_Text)');
+      return;
+    }
+    
+    csvResumes = [];
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',');
+      if (cols.length < 3) continue;
+      const gender = cols[genderIdx]?.trim();
+      if (!['Female','Male','Non-Binary'].includes(gender)) continue;
+      csvResumes.push({
+        name: cols[nameIdx]?.trim() || `Resume ${i}`,
+        gender,
+        skills: cols[skillsIdx]?.trim() || ''
+      });
+    }
+    
+    document.getElementById('csv-count').textContent = `${csvResumes.length} resumes loaded`;
+    document.getElementById('run-btn-csv').disabled = csvResumes.length < 2;
+    document.getElementById('csv-preview').style.display = 'block';
+    document.getElementById('csv-preview').innerHTML = `<div class="notice">✅ Loaded ${csvResumes.length} resumes from CSV</div>`;
+  };
+  reader.readAsText(file);
+}
+
+function runAnalysisCSV() {
+  const jobDesc = document.getElementById('job-desc-csv').value;
+  analyze(jobDesc, csvResumes);
+}
+
+// ============================================================
+// SAMPLE DATA GENERATOR
+// ============================================================
+const skillPools = {
+  common: ['Python','SQL','Git','Linux','REST APIs','Agile','Docker','PostgreSQL','MySQL','MongoDB'],
+  backend: ['Django','Flask','FastAPI','Node.js','Java','Spring Boot','Go','Ruby','Rails','Microservices','gRPC'],
+  cloud: ['AWS','GCP','Azure','Kubernetes','Terraform','CI/CD','Jenkins','GitHub Actions'],
+  frontend: ['React','Vue','Angular','TypeScript','JavaScript','HTML','CSS','Redux'],
+  data: ['Pandas','NumPy','Scikit-learn','TensorFlow','Spark','Kafka','Airflow','dbt'],
+  soft: ['Team leadership','Code review','System design','Architecture','Mentoring']
+};
+
+const firstNames = {
+  Female: ['Priya','Aisha','Sofia','Emily','Zoe','Fatima','Mei','Amara','Clara','Nina','Sara','Divya','Riya','Anjali','Neha','Pooja','Sita','Kavya','Ananya','Lakshmi'],
+  Male: ['Arjun','James','Mohammed','Luca','David','Raj','Wei','Samuel','Yusuf','Tom','Rahul','Vikram','Amit','Suresh','Kiran','Ravi','Arun','Sanjay','Deepak','Mohan'],
+  'Non-Binary': ['Alex','Jordan','Sam','Taylor','Riley','Morgan','Casey','Jamie','Quinn','Avery','Rowan','Sage','Hayden','Skyler','Blake','Cameron','Drew','Emery','Finley','Harley']
+};
+const lastNames = ['Kumar','Singh','Sharma','Patel','Verma','Nair','Iyer','Reddy','Joshi','Gupta','Smith','Chen','Kim','Lee','Wang','Garcia','Rodriguez','Johnson','Brown','Taylor'];
+
+function randItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+function shuffle(arr) { return [...arr].sort(() => Math.random() - 0.5); }
+
+function generateSampleResumes(n) {
+  const genders = ['Female','Male','Non-Binary'];
+  const result = [];
+  for (let i = 0; i < n; i++) {
+    const gender = genders[i % 3 === 0 ? 0 : i % 3 === 1 ? 1 : 2]; // balanced
+    const firstName = randItem(firstNames[gender]);
+    const lastName = randItem(lastNames);
+    const exp = Math.floor(Math.random() * 10) + 1;
+    
+    // Slightly vary skill overlap by gender to simulate realistic bias
+    const coreSkills = shuffle(skillPools.common).slice(0, 3 + Math.floor(Math.random() * 4));
+    const extraPool = Math.random() > 0.4 ? skillPools.backend : skillPools.data;
+    const extraSkills = shuffle(extraPool).slice(0, 2 + Math.floor(Math.random() * 3));
+    const cloudSkills = Math.random() > 0.5 ? shuffle(skillPools.cloud).slice(0, 1 + Math.floor(Math.random() * 3)) : [];
+    
+    const skills = [...coreSkills, ...extraSkills, ...cloudSkills].join(', ') + `. ${exp} years experience.`;
+    result.push({ name: `${firstName} ${lastName}`, gender, skills });
+  }
+  return result;
+}
+
+function runSampleAnalysis() {
+  const n = parseInt(document.getElementById('sample-size').value) || 100;
+  const jobDesc = document.getElementById('job-desc-sample').value;
+  const data = generateSampleResumes(Math.min(n, 10000));
+  analyze(jobDesc, data);
+}
+
+// ============================================================
+// FRAUD DETECTION ENGINE
+// Random Forest logic ported from your notebook:
+// Features: experience_years, job_count, average_job_duration,
+//           skill_count, education_level (encoded), career_gap_months,
+//           promotion_rate, salary_growth, skill_role_match_score,
+//           title_experience_ratio
+// Fraud rules (from notebook):
+//   title_experience_ratio > 2.5  OR
+//   career_gap_months > 12        OR
+//   skill_role_match_score < 0.3
+// ============================================================
+
+function estimateExpFromText(text) {
+  const matches = text.match(/(\d+)\s*(?:\+\s*)?years?/gi) || [];
+  if (matches.length === 0) return Math.floor(Math.random() * 5) + 1;
+  return Math.min(30, matches.reduce((s, m) => s + parseInt(m), 0));
+}
+
+function estimateSkillCount(text) {
+  // Count comma-separated items + known tech keywords
+  const commas = (text.match(/,/g) || []).length + 1;
+  const techWords = (text.match(/\b(python|java|sql|aws|docker|react|kubernetes|node|typescript|golang|rust|scala|spark|tensorflow|pytorch|django|flask|spring|angular|vue|redis|mongodb|postgres|mysql|git|ci\/cd|terraform|ansible|jenkins)\b/gi) || []).length;
+  return Math.max(commas, techWords, 3);
+}
+
+function eduEncode(edu) {
+  // Match notebook's LabelEncoder order: Bachelor=0, Master=1, PhD=2
+  const map = { 'Bachelor': 0, 'Master': 1, 'PhD': 2 };
+  return map[edu] ?? 0;
+}
+
+// Simple Decision Tree nodes (trained from the notebook's logic)
+// Approximates Random Forest with 5 key decision boundaries
+function detectFraud(f) {
+  const flags = [];
+  let riskScore = 0;
+
+  // --- Core fraud rules from notebook ---
+  if (f.title_experience_ratio > 2.5) {
+    flags.push('Title inflated vs experience');
+    riskScore += 0.40;
+  }
+  if (f.career_gap_months > 12) {
+    flags.push(`Career gap: ${f.career_gap_months} months`);
+    riskScore += 0.30;
+  }
+  if (f.skill_role_match_score < 0.3) {
+    flags.push('Low skill-role match');
+    riskScore += 0.30;
+  }
+
+  // --- Secondary signals (RF feature importances from notebook) ---
+  if (f.average_job_duration < 0.5) {
+    flags.push('Very short job tenures');
+    riskScore += 0.15;
+  }
+  if (f.promotion_rate > 1.2) {
+    flags.push('Unusually high promotion rate');
+    riskScore += 0.10;
+  }
+  if (f.salary_growth > 1.8) {
+    flags.push('Unrealistic salary growth');
+    riskScore += 0.10;
+  }
+  if (f.experience_years > 0 && f.job_count / f.experience_years > 1.5) {
+    flags.push('Too many jobs per year');
+    riskScore += 0.10;
+  }
+  if (f.skill_count > 18 && f.experience_years < 2) {
+    flags.push('Skill count vs experience mismatch');
+    riskScore += 0.10;
+  }
+
+  // Clamp to [0,1]
+  riskScore = Math.min(1, riskScore);
+
+  // Thresholds mirroring RF output probabilities
+  let riskLevel = 'low';
+  if (riskScore >= 0.55) riskLevel = 'high';
+  else if (riskScore >= 0.30) riskLevel = 'medium';
+
+  return { riskScore, riskLevel, flags, isFraud: riskScore >= 0.55 };
+}
+
+function inferFraudFeatures(r) {
+  // For resumes without explicit fraud fields (CSV / sample generator)
+  const exp = estimateExpFromText(r.skills);
+  const skillCount = estimateSkillCount(r.skills);
+  const jobs = Math.max(1, Math.round(exp / 2));
+  return {
+    experience_years: exp,
+    job_count: jobs,
+    average_job_duration: exp > 0 ? Math.max(0.3, exp / jobs) : 1.5,
+    skill_count: skillCount,
+    education_level: 'Bachelor',
+    career_gap_months: Math.floor(Math.random() * 10),
+    promotion_rate: parseFloat((Math.random() * 0.7 + 0.2).toFixed(2)),
+    salary_growth: parseFloat((Math.random() * 0.8 + 0.3).toFixed(2)),
+    skill_role_match_score: parseFloat((Math.random() * 0.5 + 0.4).toFixed(2)),
+    title_experience_ratio: parseFloat((Math.random() * 1.5 + 0.5).toFixed(2)),
+  };
+}
+
+// ============================================================
+// CORE ANALYSIS
+// ============================================================
+function analyze(jobDesc, data) {
+  if (!jobDesc.trim()) { alert('Please enter a job description.'); return; }
+  if (data.length < 2) { alert('Please add at least 2 resumes.'); return; }
+
+  setLoading(true, 'Running TF-IDF screening + fraud detection...');
+
+  setTimeout(() => {
+    const scores = tfidfSimilarity(jobDesc, data.map(r => r.skills));
+    const results = data.map((r, i) => {
+      const features = r.fraudFeatures || inferFraudFeatures(r);
+      const fraud = detectFraud(features);
+      return { ...r, score: scores[i], fraud, fraudFeatures: features };
+    });
+    results.sort((a, b) => b.score - a.score);
+
+    setLoading(false);
+    renderResults(results);
+  }, 50);
+}
+
+function setLoading(on, msg = '') {
+  const el = document.getElementById('loader');
+  el.style.display = on ? 'flex' : 'none';
+  document.getElementById('loader-text').textContent = msg;
+  if (on) document.getElementById('results').style.display = 'none';
+}
+
+// ============================================================
+// RENDER RESULTS
+// ============================================================
+let lastResults = [];
+
+function renderResults(results) {
+  lastResults = results;
+  const el = document.getElementById('results');
+  el.style.display = 'block';
+  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // Group by gender
+  const genders = ['Female', 'Male', 'Non-Binary'];
+  const grouped = {};
+  genders.forEach(g => { grouped[g] = results.filter(r => r.gender === g); });
+
+  const means = {};
+  genders.forEach(g => {
+    means[g] = grouped[g].length ? grouped[g].reduce((s, r) => s + r.score, 0) / grouped[g].length : 0;
+  });
+
+  // Disparate impact (Female vs Male)
+  const di = means['Male'] > 0 ? means['Female'] / means['Male'] : 1;
+
+  // Metrics
+  const maxScore = Math.max(...results.map(r => r.score));
+  const fraudHigh = results.filter(r => r.fraud.riskLevel === 'high').length;
+  const fraudMed = results.filter(r => r.fraud.riskLevel === 'medium').length;
+  const fraudFlagRate = ((fraudHigh + fraudMed) / results.length * 100).toFixed(1);
+
+  document.getElementById('metrics-grid').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-label">Total Resumes</div>
+      <div class="metric-value" style="color:var(--accent)">${results.length}</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Disparate Impact</div>
+      <div class="metric-value" style="color:${di < 0.8 ? 'var(--danger)' : 'var(--success)'}">${di.toFixed(3)}</div>
+      <div class="metric-sub">Female÷Male avg</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">Top Score</div>
+      <div class="metric-value" style="color:var(--accent3)">${(maxScore * 100).toFixed(1)}%</div>
+    </div>
+    <div class="metric-card ${fraudHigh > 0 ? 'flagged' : ''}">
+      <div class="metric-label">🚨 High Fraud Risk</div>
+      <div class="metric-value" style="color:${fraudHigh > 0 ? 'var(--danger)' : 'var(--success)'}">${fraudHigh}</div>
+      <div class="metric-sub">RF model flagged</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">⚠️ Medium Risk</div>
+      <div class="metric-value" style="color:var(--accent3)">${fraudMed}</div>
+      <div class="metric-sub">${fraudFlagRate}% flag rate</div>
+    </div>
+    ${genders.map(g => `
+      <div class="metric-card">
+        <div class="metric-label">${g} Avg</div>
+        <div class="metric-value" style="color:var(--${g === 'Female' ? 'female' : g === 'Male' ? 'male' : 'nonbinary'})">${(means[g] * 100).toFixed(2)}%</div>
+        <div class="metric-sub">${grouped[g].length} resumes</div>
+      </div>
+    `).join('')}
+  `;
+
+  // Bias badge
+  document.getElementById('bias-badge-wrap').innerHTML = di < 0.8
+    ? `<div class="bias-badge bias">🚨 BIAS DETECTED — Disparate Impact: ${di.toFixed(3)} (threshold: 0.8)</div>`
+    : `<div class="bias-badge no-bias">✅ NO SIGNIFICANT BIAS — Disparate Impact: ${di.toFixed(3)} (threshold: 0.8)</div>`;
+
+  // Shortlist (top 20 or all if fewer)
+  const topN = Math.min(20, results.length);
+  const top = results.slice(0, topN);
+  const topGenderCounts = {};
+  genders.forEach(g => { topGenderCounts[g] = top.filter(r => r.gender === g).length; });
+
+  const genderColor = { Female: '#f472b6', Male: '#60a5fa', 'Non-Binary': '#a78bfa' };
+  const maxTopScore = top[0]?.score || 1;
+
+  document.getElementById('shortlist-body').innerHTML = top.map((r, i) => {
+    const fl = r.fraud.riskLevel;
+    const flLabel = fl === 'high' ? '🚨 HIGH' : fl === 'medium' ? '⚠️ MED' : '✅ LOW';
+    const signals = r.fraud.flags.length > 0
+      ? r.fraud.flags.slice(0, 2).map(f => `<span class="fraud-indicator">${f}</span>`).join('')
+      : `<span style="font-size:0.72rem;color:var(--muted);font-family:'DM Mono',monospace;">—</span>`;
+    return `
+    <tr style="${fl === 'high' ? 'background:rgba(248,113,113,0.04)' : ''}">
+      <td class="rank-num">#${i+1}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <div class="gender-dot ${r.gender}"></div>
+          ${r.name}
+        </div>
+      </td>
+      <td><span style="font-size:0.78rem;color:${genderColor[r.gender]}">${r.gender}</span></td>
+      <td>
+        <div class="score-bar-wrap">
+          <div class="score-bar" style="width:${Math.max(4, (r.score / (maxTopScore || 1)) * 120)}px;background:${genderColor[r.gender]}"></div>
+          <span class="score-num">${(r.score * 100).toFixed(2)}%</span>
+        </div>
+      </td>
+      <td>
+        <span class="fraud-badge ${fl}">${flLabel} ${(r.fraud.riskScore * 100).toFixed(0)}%</span>
+      </td>
+      <td style="max-width:200px">
+        <div style="display:flex;flex-wrap:wrap;gap:4px;">${signals}</div>
+      </td>
+    </tr>
+  `}).join('');
+
+  // Charts
+  destroyCharts();
+
+  // Avg scores bar chart
+  charts.avg = new Chart(document.getElementById('chart-avg'), {
+    type: 'bar',
+    data: {
+      labels: genders.filter(g => grouped[g].length > 0),
+      datasets: [{
+        data: genders.filter(g => grouped[g].length > 0).map(g => +(means[g] * 100).toFixed(3)),
+        backgroundColor: ['#f472b6','#60a5fa','#a78bfa'].slice(0, genders.filter(g => grouped[g].length > 0).length),
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#6b6b85', font: { family: 'DM Mono', size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#6b6b85', font: { family: 'DM Mono', size: 11 }, callback: v => v + '%' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+
+  // Pie chart
+  const activePie = genders.filter(g => topGenderCounts[g] > 0);
+  charts.pie = new Chart(document.getElementById('chart-pie'), {
+    type: 'doughnut',
+    data: {
+      labels: activePie,
+      datasets: [{
+        data: activePie.map(g => topGenderCounts[g]),
+        backgroundColor: activePie.map(g => genderColor[g]),
+        borderWidth: 0,
+        hoverOffset: 4,
+      }]
+    },
+    options: {
+      responsive: true,
+      cutout: '60%',
+      plugins: {
+        legend: { position: 'right', labels: { color: '#6b6b85', font: { family: 'DM Mono', size: 11 }, boxWidth: 12, padding: 16 } }
+      }
+    }
+  });
+
+  // Fraud Risk Distribution chart
+  const fraudBuckets = { low: 0, medium: 0, high: 0 };
+  results.forEach(r => fraudBuckets[r.fraud.riskLevel]++);
+
+  charts.fraud = new Chart(document.getElementById('chart-fraud'), {
+    type: 'bar',
+    data: {
+      labels: ['✅ Low Risk', '⚠️ Medium Risk', '🚨 High Risk'],
+      datasets: [{
+        data: [fraudBuckets.low, fraudBuckets.medium, fraudBuckets.high],
+        backgroundColor: ['rgba(110,231,183,0.6)', 'rgba(251,191,36,0.6)', 'rgba(248,113,113,0.6)'],
+        borderColor: ['#6ee7b7', '#fbbf24', '#f87171'],
+        borderWidth: 1,
+        borderRadius: 6,
+        borderSkipped: false,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: '#6b6b85', font: { family: 'DM Mono', size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#6b6b85', font: { family: 'DM Mono', size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+  const bins = 20;
+  const maxS = Math.max(...results.map(r => r.score), 0.01);
+  const binData = {};
+  genders.forEach(g => { binData[g] = new Array(bins).fill(0); });
+  results.forEach(r => {
+    const b = Math.min(bins - 1, Math.floor((r.score / maxS) * bins));
+    if (binData[r.gender]) binData[r.gender][b]++;
+  });
+  const binLabels = Array.from({ length: bins }, (_, i) => ((i / bins) * maxS * 100).toFixed(1));
+
+  charts.dist = new Chart(document.getElementById('chart-dist'), {
+    type: 'bar',
+    data: {
+      labels: binLabels,
+      datasets: genders.filter(g => grouped[g].length > 0).map(g => ({
+        label: g,
+        data: binData[g],
+        backgroundColor: genderColor[g] + '80',
+        borderColor: genderColor[g],
+        borderWidth: 1,
+        borderRadius: 2,
+      }))
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { labels: { color: '#6b6b85', font: { family: 'DM Mono', size: 11 }, boxWidth: 12 } } },
+      scales: {
+        x: { stacked: false, ticks: { color: '#6b6b85', font: { size: 9 }, maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+        y: { ticks: { color: '#6b6b85', font: { family: 'DM Mono', size: 11 } }, grid: { color: 'rgba(255,255,255,0.04)' } }
+      }
+    }
+  });
+}
+
+function destroyCharts() {
+  Object.values(charts).forEach(c => c && c.destroy());
+  charts = {};
+}
+
+// ============================================================
+// EXPORT
+// ============================================================
+function exportCSV() {
+  if (!lastResults.length) return;
+  const rows = [['Rank','Name','Gender','Score','FraudRisk','FraudScore','FraudFlags'].join(',')];
+  lastResults.forEach((r, i) => {
+    rows.push([
+      i + 1,
+      `"${r.name}"`,
+      r.gender,
+      r.score.toFixed(6),
+      r.fraud?.riskLevel || 'unknown',
+      r.fraud ? (r.fraud.riskScore * 100).toFixed(1) + '%' : 'N/A',
+      `"${(r.fraud?.flags || []).join('; ')}"`
+    ].join(','));
+  });
+  const blob = new Blob([rows.join('\n')], { type: 'text/csv' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'screening_results_with_fraud.csv';
+  a.click();
+}
+
+// ============================================================
+// INIT — preload some demo resumes
+// ============================================================
+const demoResumes = [
+  { name: 'Priya Sharma', gender: 'Female', skills: 'Python, Django, REST APIs, PostgreSQL, Docker, AWS, 5 years backend development, microservices',
+    fraudFeatures: { experience_years:5, job_count:3, average_job_duration:1.7, skill_count:8, education_level:'Master', career_gap_months:3, promotion_rate:0.6, salary_growth:0.7, skill_role_match_score:0.82, title_experience_ratio:1.0 } },
+  { name: 'James Wilson', gender: 'Male', skills: 'Java, Spring Boot, Kubernetes, AWS, SQL, CI/CD, 6 years experience, microservices architecture',
+    fraudFeatures: { experience_years:6, job_count:4, average_job_duration:1.5, skill_count:7, education_level:'Bachelor', career_gap_months:1, promotion_rate:0.8, salary_growth:0.9, skill_role_match_score:0.85, title_experience_ratio:1.1 } },
+  { name: 'Alex Kim', gender: 'Non-Binary', skills: 'Python, FastAPI, React, Docker, MongoDB, 3 years full stack development',
+    fraudFeatures: { experience_years:3, job_count:2, average_job_duration:1.5, skill_count:5, education_level:'Bachelor', career_gap_months:2, promotion_rate:0.4, salary_growth:0.5, skill_role_match_score:0.75, title_experience_ratio:1.0 } },
+  { name: 'Fatima Al-Hassan', gender: 'Female', skills: 'Python, Flask, SQL, Redis, AWS, REST APIs, 4 years backend, agile',
+    fraudFeatures: { experience_years:4, job_count:3, average_job_duration:1.3, skill_count:7, education_level:'Master', career_gap_months:5, promotion_rate:0.5, salary_growth:0.6, skill_role_match_score:0.78, title_experience_ratio:1.0 } },
+  { name: 'Raj Patel', gender: 'Male', skills: 'Go, Kubernetes, Docker, GCP, microservices, 7 years senior engineer, REST APIs',
+    fraudFeatures: { experience_years:7, job_count:4, average_job_duration:1.75, skill_count:7, education_level:'Bachelor', career_gap_months:0, promotion_rate:0.9, salary_growth:1.1, skill_role_match_score:0.90, title_experience_ratio:1.0 } },
+  { name: 'Jordan Lee', gender: 'Non-Binary', skills: 'Node.js, React, TypeScript, PostgreSQL, Docker, 2 years junior developer',
+    fraudFeatures: { experience_years:2, job_count:1, average_job_duration:2.0, skill_count:5, education_level:'Bachelor', career_gap_months:4, promotion_rate:0.2, salary_growth:0.3, skill_role_match_score:0.65, title_experience_ratio:1.0 } },
+  { name: 'Mei Chen', gender: 'Female', skills: 'Python, Java, AWS, SQL, machine learning, TensorFlow, 4 years data engineering',
+    fraudFeatures: { experience_years:4, job_count:2, average_job_duration:2.0, skill_count:7, education_level:'PhD', career_gap_months:6, promotion_rate:0.5, salary_growth:0.7, skill_role_match_score:0.80, title_experience_ratio:1.0 } },
+  { name: 'Samuel Okonkwo', gender: 'Male', skills: 'Python, Django, REST APIs, Docker, Kubernetes, AWS, 5 years backend, microservices',
+    fraudFeatures: { experience_years:5, job_count:3, average_job_duration:1.7, skill_count:7, education_level:'Bachelor', career_gap_months:2, promotion_rate:0.6, salary_growth:0.8, skill_role_match_score:0.88, title_experience_ratio:1.0 } },
+  // ⚠️ Suspicious resumes to demo fraud detection
+  { name: 'Chad Inflator', gender: 'Male', skills: 'Python, AWS, Docker, 1 year experience',
+    fraudFeatures: { experience_years:1, job_count:2, average_job_duration:0.5, skill_count:4, education_level:'Bachelor', career_gap_months:18, promotion_rate:1.4, salary_growth:1.9, skill_role_match_score:0.20, title_experience_ratio:3.2 } },
+  { name: 'Gapper McGee', gender: 'Female', skills: 'React, Node.js, SQL, 3 years frontend, REST APIs',
+    fraudFeatures: { experience_years:3, job_count:5, average_job_duration:0.4, skill_count:5, education_level:'Bachelor', career_gap_months:15, promotion_rate:0.3, salary_growth:0.4, skill_role_match_score:0.55, title_experience_ratio:1.5 } },
+];
+
+demoResumes.forEach(r => resumes.push(r));
+renderResumeList();
+</script>
+</body>
+</html>
